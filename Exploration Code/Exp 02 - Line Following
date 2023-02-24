@@ -1,0 +1,99 @@
+//include libraries
+#include <FEHLCD.h>
+#include <FEHIO.h>
+#include <FEHMotor.h>
+#include <FEHServo.h>
+#include <FEHUtility.h>
+
+//pin declarations
+FEHMotor left_motor(FEHMotor::Motor0, 9.0);
+FEHMotor right_motor(FEHMotor::Motor1, 9.0);
+AnalogInputPin right_sensor(FEHIO::P2_0);
+AnalogInputPin middle_sensor(FEHIO::P2_1);
+AnalogInputPin left_sensor(FEHIO::P2_2);
+
+enum LineStates {
+
+MIDDLE,
+
+RIGHT,
+
+LEFT
+
+};
+
+int main() {
+
+int state = MIDDLE; // Set the initial state
+
+while (true) { // I will follow this line forever!
+
+    switch(state) {
+
+    // If I am in the middle of the line...
+
+    case MIDDLE:
+
+    // Set motor powers for driving straight
+
+    right_motor.SetPercent(20);
+    left_motor.SetPercent(20);
+
+if (right_sensor.Value() > 2.8) {
+
+state = RIGHT; // update a new state
+
+}
+
+if (left_sensor.Value() > 2.8) {
+
+state = LEFT; // update a new state
+
+}
+
+break;
+
+// If the right sensor is on the line...
+
+case RIGHT:
+
+left_motor.SetPercent(25);
+right_motor.SetPercent(7);
+
+
+if(middle_sensor.Value() > 2.8) {
+
+state = MIDDLE;
+
+}
+
+break;
+
+// If the left sensor is on the line...
+
+case LEFT:
+
+left_motor.SetPercent(7);
+right_motor.SetPercent(25);
+
+
+if(middle_sensor.Value() > 2.8) {
+
+state = MIDDLE;
+
+}
+
+break;
+
+default: // Error. Something is very wrong.
+LCD.Write("ERROR");
+
+break;
+
+}
+
+Sleep(0.2);
+
+}
+
+}
