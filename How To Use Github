@@ -1,0 +1,21 @@
+If this is your first time getting the code from github, follow these steps to get the initial code:
+
+1.) Go to the Robot Code folder and click the file called "main v#.cpp"
+2.) Check to make sure the description says that it works. If it doesn't work, go to the last version and repeat steps. 
+2.) Copy the entire code and paste it into VS Code
+
+If you are uploading code to the Github:
+
+1.) Rather than deleting the last robot code, we will make multiple files rather than trying to use pull requests.
+2.) Click into the Robot Code folder and click "Add File" -> "Create New File"
+3.) Copy your code from VS Code and paste it into the text box.
+4.) In the name box, name the code "main v2.cpp" (Replace the v2 with whatever the last version was to keep the naming scheme)
+5.) Scroll to the bottom of the page, select "Commit directly to Main branch", type a description of what you changed/created, and then click "Commit New File"
+
+
+Reminders:
+
+Don't delete any files because we might lose progress if your code doesn't work.
+Only put files in the Github if you are sure they work. 
+If they don't work but you need to save it to Github, make sure to say that it doesn't work in the commit description.
+Make sure to download the newest version of the code from Github everytime you start coding.
