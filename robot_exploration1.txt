@@ -1,0 +1,129 @@
+// Import all necessary libraries here
+#include <FEHIO.h>
+#include <FEHLCD.h>
+#include <FEHUtility.h>
+#include <FEHBuzzer.h>
+#include <FEHMotor.h>
+
+#define SLEEP 1.0
+
+// Fill in the pin declarations
+
+FEHMotor leftDrive(FEHMotor::Motor1,9.0);
+FEHMotor rightDrive(FEHMotor::Motor0,9.0);
+DigitalInputPin frontRight(FEHIO::P1_0);
+DigitalInputPin frontLeft(FEHIO::P1_3);
+DigitalInputPin backRight(FEHIO::P1_1);
+DigitalInputPin backLeft(FEHIO::P1_2);
+
+
+static void driveForward(FEHMotor left, FEHMotor right, double time) {
+	left.SetPercent(25);
+	right.SetPercent(25);
+	Sleep(time);
+
+}
+
+static void bumpLeft () {
+
+}
+
+static void bumpRight() {
+
+}
+
+int main() {
+	LCD.Clear();
+	LCD.WriteLine("Waiting for touch.");
+
+	int x,y; // Declare variables
+	while (!LCD.Touch(&x, &y)) {
+		// Screen is not being touched
+	}
+	while (LCD.Touch(&x, &y)) {
+		// Screen is being touched
+	}
+
+	LCD.WriteLine("Starting!"); //TimeNow()
+
+	leftDrive.SetPercent(25);
+	rightDrive.SetPercent(25);
+
+	while(frontLeft.Value() || frontRight.Value()) {
+
+	}
+
+	leftDrive.SetPercent(0);
+	rightDrive.SetPercent(0);
+
+	Sleep(1.0);
+
+	leftDrive.SetPercent(-20);
+	rightDrive.SetPercent(-10);
+
+	while(backLeft.Value() || backRight.Value()) {
+
+	}
+
+	//pause 
+	leftDrive.SetPercent(0);
+	rightDrive.SetPercent(0);
+
+	Sleep(1.0);
+
+	leftDrive.SetPercent(25);
+	rightDrive.SetPercent(25);
+
+	while(frontLeft.Value() || frontRight.Value()) {
+
+	}
+
+	leftDrive.SetPercent(0);
+	rightDrive.SetPercent(0);
+
+	Sleep(1.0);
+
+	leftDrive.SetPercent(-5);
+	rightDrive.SetPercent(-25);
+
+/*
+	while(backLeft.Value() && backRight.Value()) {
+
+	}
+
+	if (!backLeft.Value()) {
+		leftDrive.SetPercent(-5);
+		rightDrive.SetPercent(-15);
+		LCD.WriteLine("BL Pressed");
+	} else if (!backRight.Value()){
+		leftDrive.SetPercent(-15);
+		rightDrive.SetPercent(-5);
+		LCD.WriteLine("BR Pressed");
+	}
+*/ 	
+	
+
+
+	while(backLeft.Value() || backRight.Value()) {
+
+	}
+	
+
+	//pause 
+	leftDrive.SetPercent(0);
+	rightDrive.SetPercent(0);
+
+	Sleep(1.0);
+
+	leftDrive.SetPercent(25);
+	rightDrive.SetPercent(25);
+
+	while(frontLeft.Value() || frontRight.Value()) {
+
+	}
+
+	leftDrive.SetPercent(0);
+	rightDrive.SetPercent(0);
+
+	return 0;
+}
