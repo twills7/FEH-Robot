@@ -1,0 +1,400 @@
+// Import all necessary libraries here
+#include <FEHIO.h>
+#include <FEHLCD.h>
+#include <FEHUtility.h>
+#include <FEHBuzzer.h>
+#include <FEHMotor.h>
+
+#define SLEEP 1.0
+
+/*
+Motors are declared with both forward directions being positive 
+*/
+FEHMotor leftDrive(FEHMotor::Motor2, 9.0);
+FEHMotor rightDrive(FEHMotor::Motor1, 9.0);
+DigitalEncoder right_encoder(FEHIO::P0_0);
+DigitalEncoder left_encoder(FEHIO::P0_1);
+
+DigitalInputPin frontRight(FEHIO::P1_0);
+DigitalInputPin frontLeft(FEHIO::P1_3);
+DigitalInputPin backRight(FEHIO::P1_1);
+DigitalInputPin backLeft(FEHIO::P1_2);
+
+AnalogInputPin cds (FEHIO::P2_0);
+// Import all necessary libraries here
+AnalogInputPin right_sensor(FEHIO::P2_1);
+AnalogInputPin middle_sensor(FEHIO::P2_2);
+AnalogInputPin left_sensor(FEHIO::P2_3);
+
+enum LineStates {
+
+MIDDLE,
+
+RIGHT,
+
+LEFT
+
+};
+
+
+#define SLEEP 1.0
+#define DISTANCE_1 10.0
+#define PI 3.1415
+#define WHEEL_GAP 7.625
+#define MOTOR_MULTIPLIER 1.02
+// old: 1.065
+// Fill in the pin declarations
+
+
+static void drive(float power, float distance){
+    float shaft = (distance * 318.0) / (PI * 2.5);
+	float rightMotor = MOTOR_MULTIPLIER * power;
+    rightDrive.SetPercent(rightMotor);
+    leftDrive.SetPercent(power);
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+    while (right_encoder.Counts() + left_encoder.Counts() <= (shaft * 2)) {
+
+	}
+	rightDrive.Stop();
+	leftDrive.Stop();
+}
+
+static void drive(float leftPower, float rightPower, float distance){
+    float shaft = (distance * 318.0) / (PI * 2.5);
+	rightPower = MOTOR_MULTIPLIER * rightPower;
+
+    rightDrive.SetPercent(rightPower);
+    leftDrive.SetPercent(leftPower);
+
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    while (right_encoder.Counts() < shaft || left_encoder.Counts() < shaft){
+        LCD.Write("Left: ");
+		LCD.WriteLine(left_encoder.Counts());
+		LCD.Write("Right: ");
+		LCD.WriteLine(right_encoder.Counts());
+		
+		if (right_encoder.Counts() > shaft){
+            rightDrive.Stop();
+        }
+        if (left_encoder.Counts() > shaft){
+            leftDrive.Stop();
+        }
+		LCD.Clear();
+    }
+}
+
+static void orientLeft() {
+	
+	float shaft = WHEEL_GAP * PI * 318.0 / (4.0 * PI * 2.5);
+	float power = 30.0;
+	float rightMotor = MOTOR_MULTIPLIER * power;
+
+	right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+	rightDrive.SetPercent(rightMotor);
+    leftDrive.SetPercent(-power);
+	
+	while (right_encoder.Counts() + left_encoder.Counts() <= (shaft * 2)) {
+
+	}
+	rightDrive.Stop();
+	leftDrive.Stop();
+}
+
+static void orientRight() {
+	float shaft = WHEEL_GAP * PI * 318.0 / (4.0 * PI * 2.5);
+	float power = 30.0;
+	float rightMotor = MOTOR_MULTIPLIER * power;
+	
+	right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+	rightDrive.SetPercent(-rightMotor);
+    leftDrive.SetPercent(power);
+	
+	while (right_encoder.Counts() + left_encoder.Counts() <= (shaft * 2)) {
+
+	}
+	rightDrive.Stop();
+	leftDrive.Stop();
+}
+
+static void orient(float degrees, int leftRight) { // 1 for left, 2 for right
+	float ratioShaft = 360.0 / degrees;
+	float shaft = WHEEL_GAP * PI * 318.0 / (ratioShaft * PI * 2.5);
+	float power = 30.0;
+	float rightMotor = MOTOR_MULTIPLIER * power;
+
+	
+	if (leftRight == 1) {
+		rightDrive.SetPercent(rightMotor);
+    	leftDrive.SetPercent(-power);
+	}
+	else if (leftRight == 2) {
+		rightDrive.SetPercent(-rightMotor);
+    	leftDrive.SetPercent(power);
+	}
+	else {
+		LCD.WriteLine("Error: Invalid turn direction specified.");
+	}
+	right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+	
+	while (right_encoder.Counts() + left_encoder.Counts() < (shaft * 2)) {
+
+	}
+	rightDrive.Stop();
+	leftDrive.Stop();
+}
+
+static void startRobot() {
+	LCD.Clear();
+	LCD.WriteLine("Waiting for touch.");
+
+	int x,y; // Declare variables
+	while (!LCD.Touch(&x, &y)) {
+		// Screen is not being touched
+	}
+	while (LCD.Touch(&x, &y)) {
+		// Screen is being touched
+	}
+
+	LCD.WriteLine("Starting!"); //TimeNow()
+}
+
+static void bumpLeft () {
+	while (frontLeft.Value()) {
+
+	}
+}
+
+static void bumpRight() {
+	while (frontRight.Value()) {
+
+	}
+}
+
+static void bumpBoth() {
+	while(frontLeft.Value() || frontRight.Value()) {
+
+	}
+}
+
+static void bumpEither() {
+	while(frontLeft.Value() && frontRight.Value()) {
+
+	}
+}
+
+static int cdsShowReading() {
+	float value;
+	int redCounter = 0;
+	int blueCounter = 0;
+	int color = -1;
+
+	while(color == -1) {
+		value = cds.Value();
+		LCD.WriteLine(value);
+		if (0.9 > value && value > 0.4) {
+			redCounter = 0;
+			blueCounter ++;
+			if (blueCounter > 3) {
+				LCD.WriteLine("Detected blue at nose of airplane!");
+				color = 2;
+				Sleep(2.0);
+			}
+		}
+		else if (0.35 > value && value > 0.05) {
+			blueCounter = 0;
+			redCounter ++;
+			if (redCounter > 3) {
+				LCD.WriteLine("Detected red at nose of airplane!");
+				color = 1;
+				Sleep(2.0);
+
+			}
+		}
+		Sleep(0.5);
+		LCD.Clear();
+	}
+	return color;
+}
+
+static void cdsDetect(float min, float max) {
+	while(cds.Value() < min || cds.Value() > max) {
+		LCD.Write("To start, awaiting value above ");
+		LCD.Write(min);
+		LCD.Write(" and below ");
+		LCD.WriteLine(max);
+		LCD.Write("Currently at: ");
+		LCD.WriteLine(cds.Value());
+		Sleep(1.0);
+		LCD.Clear();
+	}
+	LCD.WriteLine("Starting!");
+}
+
+static void ticket(int color) { // 1 is red, 2 is blue 
+	
+	if (color == 1) {
+		drive(40.0, 12);
+	}
+	else if (color == 2) {
+		drive(40.0, 7);
+	}
+	orientRight();
+	drive(-30.0, 6);
+}
+
+static void followLine() {
+	int state = MIDDLE; // Set the initial state
+
+while (true) { // I will follow this line forever!
+
+    switch(state) {
+
+    // If I am in the middle of the line...
+
+    case MIDDLE:
+
+    // Set motor powers for driving straight
+
+    rightDrive.SetPercent(20);
+    leftDrive.SetPercent(20);
+
+if (right_sensor.Value() > 2.8) {
+
+state = RIGHT; // update a new state
+
+}
+
+if (left_sensor.Value() > 2.8) {
+
+state = LEFT; // update a new state
+
+}
+
+break;
+
+// If the right sensor is on the line...
+
+case RIGHT:
+
+leftDrive.SetPercent(25);
+rightDrive.SetPercent(7);
+
+
+if(middle_sensor.Value() > 2.8) {
+
+state = MIDDLE;
+
+}
+
+break;
+
+// If the left sensor is on the line...
+
+case LEFT:
+
+leftDrive.SetPercent(7);
+rightDrive.SetPercent(25);
+
+
+if(middle_sensor.Value() > 2.8) {
+
+state = MIDDLE;
+
+}
+
+break;
+
+default: // Error. Something is very wrong.
+LCD.Write("ERROR");
+
+break;
+
+}
+
+Sleep(0.2);
+
+}
+}
+
+static void driveBackFromKioskPC1() {
+	drive(-40.0, 5);
+	orientLeft();
+	orientLeft();
+	//orient(10.0, 1);
+	drive(40.0, 11);
+	orientLeft();
+	drive(40.0, 12); // added 5 inches 
+	orientRight();
+	drive(40.0, 12);
+	drive(50.0, 12);
+	drive(40.0, 9);
+}
+
+static void driveBackFromKioskPC2() {
+	//orient(10.0, 1);
+	drive(40.0, 16);
+	orientLeft();
+	drive(40.0, 15); // added several inches 
+	orientRight();
+	drive(40.0, 12);
+	drive(50.0, 12);
+	drive(40.0, 12);
+}
+
+static void checkpoint1() {
+	cdsDetect(0.0, 1.0);
+	drive(30.0, 3.5);
+	orient(45.0, 1);
+	drive(40.0, 9);
+	drive(50.0, 12);
+	drive(40.0, 12);
+	orientLeft();
+	drive(40.0, 10);
+	orientRight();
+	orient(5, 2);
+	drive(40.0, 16);
+
+	driveBackFromKioskPC1();
+
+	LCD.WriteLine("Did I do it?");
+	Sleep(2.0);
+	LCD.WriteLine("Probably not...");
+}
+
+static void checkpoint2() {
+	cdsDetect(0.0, 0.35);
+	drive(40.0, 15);
+	orient(45, 1);
+	drive(40.0, 14);
+	orientRight();
+	drive(40.0, 43); // added 3 inches for hill 
+	orient(45, 2);
+	drive(40.0, 2);
+	orient(45, 2);
+	drive(40.0, 2.5);
+	drive(-40.0, 3.3);
+	
+	// ticket kiosk component 
+	int color = cdsShowReading();
+	ticket(color);
+
+	// return down the ramp
+	driveBackFromKioskPC2();
+	LCD.WriteLine("Did I only use shaft encoding?");
+	Sleep(0.5); 
+	LCD.WriteLine("And complete the course?");
+	Sleep(1.0);
+	LCD.WriteLine("               :P");
+	
+}
+
+int main() {
+	checkpoint2();
+	return 0;
+}
