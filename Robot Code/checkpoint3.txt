@@ -267,26 +267,6 @@ static void driveBackFromKioskPC2() {
 	drive(40.0, 12);
 }
 
-static void checkpoint1() {
-	cdsDetect(0.0, 1.0);
-	drive(30.0, 3.5);
-	orient(45.0, 1);
-	drive(40.0, 9);
-	drive(50.0, 12);
-	drive(40.0, 12);
-	orientLeft();
-	drive(40.0, 10);
-	orientRight();
-	orient(5, 2);
-	drive(40.0, 16);
-
-	driveBackFromKioskPC1();
-
-	LCD.WriteLine("Did I do it?");
-	Sleep(2.0);
-	LCD.WriteLine("Probably not...");
-}
-
 void pulse_forward(int percent, float seconds)
 {
     // Set both motors to desired percent
@@ -386,7 +366,10 @@ void check_y(float y_coordinate, int orientation)
 void moveForklift(float degree){
 	forklift.SetMin(SERVO_MIN);
 	forklift.SetMax(SERVO_MAX);
-	forklift.SetDegree(degree);
+	float time = TimeNow();
+	while (TimeNow() - time < 0.20){
+		forklift.SetDegree(degree);
+	}
 }
 
 void check_heading(float heading)
@@ -409,6 +392,8 @@ void check_heading(float heading)
 }
 
 static void checkpoint3() {
+	//start at 90 degrees
+	moveForklift(90.0);
     // Initialize the RPS
     RPS.InitializeTouchMenu();
      
@@ -417,42 +402,44 @@ static void checkpoint3() {
 
 	cdsDetect(0.0, 0.35);
 
-    //moveForklift(90.0);
-
     // Check which lever to flip and perform some action
     if(correctLever == 0)
     {
         drive(30.0, 20.0);
         orient(40.0, 1);
+		drive(30.0, 1);
         orient(90.0, 1);
+		
     } 
     else if(correctLever == 1)
     {
         drive(30.0, 20.0);
         orient(40.0, 1);
-        drive(30.0, 4.0);
+        drive(30.0, 5.0);
         orient(90.0, 1);
     }
     else if(correctLever == 2)
     {
         drive(30.0, 20.0);
         orient(40.0, 1);
-        drive(30.0, 7.5);
+        drive(30.0, 8.5);
         orient(90.0, 1);
     }
-
-	return;
+	drive(-30.0, 4);
+	
+    moveForklift(30.0);
+	drive(30.0, 0.75);
 	// flip down 
-	moveForklift(35.0);
+	moveForklift(15.0);
 
 	// sleep then back up 
 	Sleep(5.0);
-	drive(-20.0, 3);
+	drive(-20.0, 2);
 
 	// change servo to down position to flip back up
 	moveForklift(0.0);
 	drive(20.0, 3);
-	moveForklift(50.0);
+	moveForklift(30.0);
 
 }
 
@@ -463,15 +450,6 @@ int main() {
 	// 	LCD.Clear();
 	// }
 	
-	moveForklift(90.0);
-	Sleep(2.0);
-	moveForklift(45.0);
-	Sleep(2.0);
-	moveForklift(0.0);
-	Sleep(2.0);
-	moveForklift(135.0);
-	Sleep(2.0);
-	moveForklift(180.0);
 	checkpoint3();
 	return 0;
 }
