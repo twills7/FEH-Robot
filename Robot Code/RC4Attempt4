@@ -1,0 +1,493 @@
+// Import all necessary libraries here
+#include <FEHIO.h>
+#include <FEHLCD.h>
+#include <FEHUtility.h>
+#include <FEHBuzzer.h>
+#include <FEHMotor.h>
+#include <FEHRPS.h>
+#include <FEHServo.h>
+
+#define SLEEP 1.0
+
+/*
+Motors are declared with both forward directions being positive 
+*/
+FEHMotor leftDrive(FEHMotor::Motor2, 9.0);
+FEHMotor rightDrive(FEHMotor::Motor1, 9.0);
+DigitalEncoder right_encoder(FEHIO::P0_0);
+DigitalEncoder left_encoder(FEHIO::P0_1);
+
+DigitalInputPin frontRight(FEHIO::P1_0);
+DigitalInputPin frontLeft(FEHIO::P1_3);
+DigitalInputPin backRight(FEHIO::P1_1);
+DigitalInputPin backLeft(FEHIO::P1_2);
+
+AnalogInputPin cds (FEHIO::P2_0);
+
+FEHServo forklift(FEHServo::Servo2);
+// Import all necessary libraries here
+
+
+#define SLEEP 1.0
+#define DISTANCE_1 10.0
+#define PI 3.1415
+#define WHEEL_GAP 7.625
+#define MOTOR_MULTIPLIER 1.02
+#define SERVO_MIN 717
+#define SERVO_MAX 2428
+#define LEVER_DEGREE 1
+// old: 1.065
+// Fill in the pin declarations
+
+
+static void drive(float power, float distance){
+    float shaft = (distance * 318.0) / (PI * 2.5);
+	float rightMotor = MOTOR_MULTIPLIER * power;
+    rightDrive.SetPercent(rightMotor);
+    leftDrive.SetPercent(power);
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+    while (right_encoder.Counts() + left_encoder.Counts() <= (shaft * 2)) {
+
+	}
+	rightDrive.Stop();
+	leftDrive.Stop();
+}
+
+static void drive(float leftPower, float rightPower, float distance){
+    float shaft = (distance * 318.0) / (PI * 2.5);
+	rightPower = MOTOR_MULTIPLIER * rightPower;
+
+    rightDrive.SetPercent(rightPower);
+    leftDrive.SetPercent(leftPower);
+
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    while (right_encoder.Counts() < shaft || left_encoder.Counts() < shaft){
+        LCD.Write("Left: ");
+		LCD.WriteLine(left_encoder.Counts());
+		LCD.Write("Right: ");
+		LCD.WriteLine(right_encoder.Counts());
+		
+		if (right_encoder.Counts() > shaft){
+            rightDrive.Stop();
+        }
+        if (left_encoder.Counts() > shaft){
+            leftDrive.Stop();
+        }
+		LCD.Clear();
+    }
+}
+
+static void orientLeft() {
+	
+	float shaft = WHEEL_GAP * PI * 318.0 / (4.0 * PI * 2.5);
+	float power = 30.0;
+	float rightMotor = MOTOR_MULTIPLIER * power;
+
+	right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+	rightDrive.SetPercent(rightMotor);
+    leftDrive.SetPercent(-power);
+	
+	while (right_encoder.Counts() + left_encoder.Counts() <= (shaft * 2)) {
+
+	}
+	rightDrive.Stop();
+	leftDrive.Stop();
+}
+
+static void orientRight() {
+	float shaft = WHEEL_GAP * PI * 318.0 / (4.0 * PI * 2.5);
+	float power = 30.0;
+	float rightMotor = MOTOR_MULTIPLIER * power;
+	
+	right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+	rightDrive.SetPercent(-rightMotor);
+    leftDrive.SetPercent(power);
+	
+	while (right_encoder.Counts() + left_encoder.Counts() <= (shaft * 2)) {
+
+	}
+	rightDrive.Stop();
+	leftDrive.Stop();
+}
+
+static void orient(float degrees, int leftRight) { // 1 for left, 2 for right
+	float ratioShaft = 360.0 / degrees;
+	float shaft = WHEEL_GAP * PI * 318.0 / (ratioShaft * PI * 2.5);
+	float power = 30.0;
+	float rightMotor = MOTOR_MULTIPLIER * power;
+
+	
+	if (leftRight == 1) {
+		rightDrive.SetPercent(rightMotor);
+    	leftDrive.SetPercent(-power);
+	}
+	else if (leftRight == 2) {
+		rightDrive.SetPercent(-rightMotor);
+    	leftDrive.SetPercent(power);
+	}
+	else {
+		LCD.WriteLine("Error: Invalid turn direction specified.");
+	}
+	right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+	
+	while (right_encoder.Counts() + left_encoder.Counts() < (shaft * 2)) {
+
+	}
+	rightDrive.Stop();
+	leftDrive.Stop();
+}
+
+static void startRobot() {
+	LCD.Clear();
+	LCD.WriteLine("Waiting for touch.");
+
+	int x,y; // Declare variables
+	while (!LCD.Touch(&x, &y)) {
+		// Screen is not being touched
+	}
+	while (LCD.Touch(&x, &y)) {
+		// Screen is being touched
+	}
+
+	LCD.WriteLine("Starting!"); //TimeNow()
+}
+
+static void bumpLeft () {
+	while (frontLeft.Value()) {
+
+	}
+}
+
+static void bumpRight() {
+	while (frontRight.Value()) {
+
+	}
+}
+
+static void bumpBoth() {
+	while(frontLeft.Value() || frontRight.Value()) {
+
+	}
+}
+
+static void bumpEither() {
+	while(frontLeft.Value() && frontRight.Value()) {
+
+	}
+}
+
+static int cdsShowReading() {
+	float value;
+	int redCounter = 0;
+	int blueCounter = 0;
+	int color = -1;
+
+	while(color == -1) {
+		value = cds.Value();
+		LCD.WriteLine(value);
+		if (0.9 > value && value > 0.4) {
+			redCounter = 0;
+			blueCounter ++;
+			if (blueCounter > 3) {
+				LCD.WriteLine("Detected blue at nose of airplane!");
+				color = 2;
+				Sleep(2.0);
+			}
+		}
+		else if (0.35 > value && value > 0.05) {
+			blueCounter = 0;
+			redCounter ++;
+			if (redCounter > 3) {
+				LCD.WriteLine("Detected red at nose of airplane!");
+				color = 1;
+				Sleep(2.0);
+
+			}
+		}
+		Sleep(0.5);
+		LCD.Clear();
+	}
+	return color;
+}
+
+static void cdsDetect(float min, float max) {
+	while(cds.Value() < min || cds.Value() > max) {
+		LCD.Write("To start, awaiting value above ");
+		LCD.Write(min);
+		LCD.Write(" and below ");
+		LCD.WriteLine(max);
+		LCD.Write("Currently at: ");
+		LCD.WriteLine(cds.Value());
+		Sleep(1.0);
+		LCD.Clear();
+	}
+	LCD.WriteLine("Starting!");
+}
+
+static void ticket(int color) { // 1 is red, 2 is blue 
+	
+	if (color == 1) {
+		drive(40.0, 12);
+	}
+	else if (color == 2) {
+		drive(40.0, 7);
+	}
+	orientRight();
+	drive(-30.0, 6);
+}
+
+static void driveBackFromKioskPC1() {
+	drive(-40.0, 5);
+	orientLeft();
+	orientLeft();
+	//orient(10.0, 1);
+	drive(40.0, 11);
+	orientLeft();
+	drive(40.0, 12); // added 5 inches 
+	orientRight();
+	drive(40.0, 12);
+	drive(50.0, 12);
+	drive(40.0, 9);
+}
+
+static void driveBackFromKioskPC2() {
+	//orient(10.0, 1);
+	drive(40.0, 16);
+	orientLeft();
+	drive(40.0, 15); // added several inches 
+	orientRight();
+	drive(40.0, 12);
+	drive(50.0, 12);
+	drive(40.0, 12);
+}
+
+void pulse_forward(int percent, float seconds)
+{
+    // Set both motors to desired percent
+    rightDrive.SetPercent(percent);
+    leftDrive.SetPercent(percent);
+
+    // Wait for the correct number of seconds
+    Sleep(seconds);
+
+    // Turn off motors
+    rightDrive.Stop();
+    leftDrive.Stop();
+}
+void pulse_counterclockwise(int percent, float seconds)
+{
+    // Set both motors to desired percent
+    rightDrive.SetPercent(percent);
+    leftDrive.SetPercent(-percent);
+
+    // Wait for the correct number of seconds
+    Sleep(seconds);
+
+    // Turn off motors
+    rightDrive.Stop();
+    leftDrive.Stop();
+}
+void turn_counterclockwise(int percent, int counts)
+{
+    // Reset encoder counts
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+
+    // Set both motors to desired percent
+    rightDrive.SetPercent(percent);
+    leftDrive.SetPercent(-percent);
+
+    // While the average of the left and right encoder are less than counts,
+    // keep running motors
+    while ((left_encoder.Counts() + right_encoder.Counts()) / 2. < counts);
+
+    // Turn off motors
+    rightDrive.Stop();
+    leftDrive.Stop();
+}
+void check_x(float x_coordinate, int orientation)
+{
+    // Determine the direction of the motors based on the orientation of the QR code
+    int power = 30;
+    if (orientation == 1)
+    {
+        power = -30;
+    }
+
+    // Check if receiving proper RPS coordinates and whether the robot is within an acceptable range
+    while (RPS.X() > -1.1  && (RPS.X() < x_coordinate - 0.3 || RPS.X() > x_coordinate + 0.3))
+    {
+        if (RPS.X() > x_coordinate + 0.3)
+        {
+            // Pulse the motors for a short duration in the correct direction
+            pulse_forward(-power, 0.1);
+        }
+        else if (RPS.X() < x_coordinate - 0.3)
+        {
+            // Pulse the motors for a short duration in the correct direction
+            pulse_forward(power, 0.1);
+        }
+        Sleep(0.3);
+    }
+}
+
+void check_y(float y_coordinate, int orientation)
+{
+    // Determine the direction of the motors based on the orientation of the QR code
+    int power = 30;
+    if (orientation == 1)
+    {
+        power = -30;
+    }
+
+    // Check if receiving proper RPS coordinates and whether the robot is within an acceptable range
+    while (RPS.Y() > -1.1 && (RPS.Y() < y_coordinate - 0.3 || RPS.Y() > y_coordinate + 0.3))
+    {
+        if (RPS.Y() > y_coordinate + 0.3)
+        {
+            // Pulse the motors for a short duration in the correct direction
+            pulse_forward(-power, 0.1);
+        }
+        else if (RPS.Y() < y_coordinate - 0.3)
+        {
+            // Pulse the motors for a short duration in the correct direction
+            pulse_forward(power, 0.1);
+        }
+        Sleep(0.3);
+    }
+}
+
+void moveForklift(float degree){
+	forklift.SetMin(SERVO_MIN);
+	forklift.SetMax(SERVO_MAX);
+	// float time = TimeNow();
+	forklift.SetDegree(degree);
+	// while (TimeNow() - time < 0.40){
+	// 	forklift.SetDegree(degree);
+	// }
+}
+
+void check_heading(float heading)
+{
+   // heading is input for direction 
+   // float currentHeading = RPS.Heading();
+   while (heading < (RPS.Heading() - 1.5) || heading > (RPS.Heading() + 1.5)) {
+		if (RPS.Heading() > heading + 1.5)
+        {
+            // Pulse the motors for a short duration in the correct direction
+            pulse_counterclockwise(-30, 0.1);
+        }
+        else if (RPS.Heading() < heading - 1.5)
+        {
+            // Pulse the motors for a short duration in the correct direction
+            pulse_counterclockwise(30, 0.1);
+        }
+        Sleep(0.6);
+   }
+}
+
+static void checkpoint3() {
+	//start at 90 degrees
+	moveForklift(90.0);
+    // Initialize the RPS
+    RPS.InitializeTouchMenu();
+     
+    // Get correct lever from the RPS
+    int correctLever = RPS.GetCorrectLever();
+
+	cdsDetect(0.0, 0.35);
+
+    // Check which lever to flip and perform some action
+    if(correctLever == 0)
+    {
+        drive(30.0, 20.0);
+        orient(40.0, 1);
+		drive(30.0, 1.5);
+        orient(90.0, 1);
+		
+    } 
+    else if(correctLever == 1)
+    {
+        drive(30.0, 20.0);
+        orient(40.0, 1);
+        drive(30.0, 5.0);
+        orient(90.0, 1);
+    }
+    else if(correctLever == 2)
+    {
+        drive(30.0, 20.0);
+        orient(40.0, 1);
+        drive(30.0, 7.5);
+        orient(80.0, 1);
+    }
+	drive(-30.0, 3.25);
+	
+    moveForklift(30.0);
+	drive(30.0, 0.75);
+	// flip down 
+	moveForklift(10.0);
+	Sleep(0.5);
+	moveForklift(30.0);
+	// sleep then back up 
+	Sleep(5.0);
+	drive(-20.0, 2);
+
+	// change servo to down position to flip back up
+	moveForklift(0.0);
+	// orient(5.0, 2);
+	drive(20.0, 1.75);
+	moveForklift(20.0);
+	moveForklift(40.0);
+	Sleep(0.5);
+	drive(-20.0, 2);
+	moveForklift(20.0);
+
+}
+
+static void checkpoint4() {
+	// Initialize the RPS
+	moveForklift(90);
+	
+    RPS.InitializeTouchMenu();
+
+	cdsDetect(0.0, 1.0);
+
+	drive(40.0, 15);
+	orient(45, 1);
+	drive(40.0, 10.75);
+	orientRight();
+	check_heading(180.0);
+	drive(40.0, 5);
+	drive(50.0, 15);
+	drive(40.0, 8);
+	check_heading(180.0);
+	check_y(50.25, 0);
+	check_heading(180.0);
+	orient(70.0, 2);
+	moveForklift(0);
+	drive(40.0, 9);
+	check_x(18.25, 0);
+	drive(-20.0, 0.2);
+	// drive(20.0, 3.25);
+	// drive(-20.0, 0.1);
+	moveForklift(90);
+	Sleep(1.0);
+	moveForklift(30);
+}
+
+int main() {
+	// while (true) {
+	// 	LCD.WriteLine(cds.Value());
+	// 	Sleep(1.0);
+	// 	LCD.Clear();
+	// }
+
+	checkpoint4();
+	return 0;
+}
