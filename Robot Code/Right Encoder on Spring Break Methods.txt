@@ -1,0 +1,53 @@
+#define MOTOR_MULTIPLIER 1.10
+
+static void drive(float power, float distance){
+    float shaft = (distance * 318.0) / (PI * 2.5);
+	float rightMotor = MOTOR_MULTIPLIER * power;
+    rightDrive.SetPercent(rightMotor);
+    leftDrive.SetPercent(power);
+    right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+    while (left_encoder.Counts() <= (shaft)) {
+		LCD.Write("Left counts:");
+		LCD.WriteLine(left_encoder.Counts());
+		LCD.Write("Right counts:");
+		LCD.WriteLine(right_encoder.Counts());
+	}
+	rightDrive.Stop();
+	leftDrive.Stop();
+}
+
+static void orient(float degrees, int leftRight) { // 1 for left, 2 for right
+	float ratioShaft = 360.0 / degrees;
+	float shaft = WHEEL_GAP * PI * 318.0 / (ratioShaft * PI * 2.5);
+	float power = 30.0;
+	float rightMotor = MOTOR_MULTIPLIER * power;
+
+	
+	if (leftRight == 1) {
+		rightDrive.SetPercent(rightMotor);
+    	leftDrive.SetPercent(-power);
+	}
+	else if (leftRight == 2) {
+		rightDrive.SetPercent(-rightMotor);
+    	leftDrive.SetPercent(power);
+	}
+	else {
+		LCD.WriteLine("Error: Invalid turn direction specified.");
+	}
+	right_encoder.ResetCounts();
+    left_encoder.ResetCounts();
+	
+	while (left_encoder.Counts() < (shaft)) {
+
+	}
+	rightDrive.Stop();
+	leftDrive.Stop();
+}
+
+int main() {
+	// sample code: drives ~10, turn right 90 and back left 90
+	drive(20.0, 10);
+	orient(92.0, 2);
+	orient(86.0, 1);
+}
