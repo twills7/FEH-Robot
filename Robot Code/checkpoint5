@@ -286,9 +286,9 @@ void moveForklift(float degree){
 }
 
 void moveLuggage(float degree){
-	forklift.SetMin(LUG_MIN);
-	forklift.SetMax(LUG_MAX);
-	forklift.SetDegree(degree);
+	luggage.SetMin(LUG_MIN);
+	luggage.SetMax(LUG_MAX);
+	luggage.SetDegree(degree);
 }
 
 void check_heading(float heading)
@@ -346,6 +346,7 @@ static void ticketKioskTask() {
 static int startRun(){
 	//start at 90 degrees
 	moveForklift(90.0);
+	moveLuggage(90.0);
     // Initialize the RPS
     RPS.InitializeTouchMenu();
     
@@ -408,19 +409,27 @@ static void fuelLever(int correctLever){
 }
 
 static void checkpoint5() {
+	moveLuggage(90.0);
 	int lever = startRun();
+	leftDrive.SetPercent(30.0);
+	rightDrive.SetPercent(30.0);
+	Sleep(3.4);
+	orient(95.0, 2);
+	check_heading2(183.0);
+	drive(50.0, 21.0);
+	orient(95.0, 2);
+	check_heading2(90.0);
+	check_x(14, 0);
+	moveLuggage(160.0);
+	Sleep(1.0);
+	leftDrive.SetPercent(-30.0);
+	rightDrive.SetPercent(-30.0);
+	Sleep(1.0);
 	leftDrive.SetPercent(30.0);
 	rightDrive.SetPercent(30.0);
 	Sleep(5.0);
 	orient(95.0, 2);
-	check_heading2(183.0);
-	drive(50.0, 22.0);
-	orient(95.0, 2);
-	check_heading2(90.0);
-	check_x(12.0, 0);
-	//moveLuggage(45.0);
-	leftDrive.SetPercent(-30.0);
-	rightDrive.SetPercent(-30.0);
+	drive(30.0, 40.0);
 }
 
 int main() {
