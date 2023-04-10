@@ -1,0 +1,69 @@
+
+#include <FEHLCD.h>
+#include <FEHIO.h>
+#include <FEHUtility.h>
+#include <FEHMotor.h>
+#include <FEHRPS.h>
+#include <FEHSD.h>
+
+void set_points_of_interest()
+{
+    // Declare variables
+    float touch_x, touch_y;
+    char points[1] = {'A'}; // 1 is num points of interest
+
+    // Open SD file for writing
+    FEHFile *fptr = SD.FOpen("RPS_POIs.txt", "w");
+
+    Sleep(100);
+    LCD.Clear();
+
+    // Wait for touchscreen to be pressed and released
+    LCD.WriteLine("Press Screen to Record");
+    while (!LCD.Touch(&touch_x, &touch_y));
+    while (LCD.Touch(&touch_x, &touch_y));
+
+    LCD.ClearBuffer();
+
+    // Clear screen
+    Sleep(100); // wait for 100ms to avoid updating the screen too quickly
+    LCD.Clear();
+
+    // Write initial screen info
+    LCD.WriteRC("X Position:", 11, 0);
+    LCD.WriteRC("Y Position:", 12, 0);
+    LCD.WriteRC("   Heading:", 13, 0);
+
+    // Step through each path point to record position and heading
+    for (int n = 0; n < 1; n++) // 1 is num points of interest
+    {
+        // Write point letter
+        LCD.WriteRC("Touch to set point ", 9, 0);
+        LCD.WriteRC(points[n], 9, 20);
+
+        // Wait for touchscreen to be pressed and display RPS data
+        while (!LCD.Touch(&touch_x, &touch_y))
+        {
+            LCD.WriteRC(RPS.X(), 11, 12);       // update the x coordinate
+            LCD.WriteRC(RPS.Y(), 12, 12);       // update the y coordinate
+            LCD.WriteRC(RPS.Heading(), 13, 12); // update the heading
+
+            Sleep(100); // wait for 100ms to avoid updating the screen too quickly
+        }
+        while (LCD.Touch(&touch_x, &touch_y));
+        LCD.ClearBuffer();
+
+        // Print RPS data for this path point to file
+        SD.FPrintf(fptr, "%f %f\n", RPS.X(), RPS.Y());
+    }
+
+    // Close SD file
+    SD.FClose(fptr);
+    LCD.Clear();
+}
+
+// to read in: 
+FEHFile *fptr = SD.FOpen("RPS_POIs.txt", "r");
+	float A_x, A_y, B_x, B_y, C_x, C_y, D_x, D_y;
+    SD.FScanf(fptr, "%f%f", &A_x, &A_y);
+    SD.FClose(fptr);
